@@ -1,6 +1,6 @@
 import csv
 from datetime import datetime
-from dash import Dash, html, dcc
+from dash import Dash, html, dcc, Input
 import plotly.express as px
 import pandas as pd
 
@@ -11,18 +11,16 @@ def readcsv(filename):
         for row in reader:
             if row[0] == 'pink morsel':
                 sales = float(row[1][1:]) * int(row[2])
-                l = []
-                l.append('$' + str(sales))
-                l.append(row[3])
-                l.append(row[4])
+                l = ['$' + str(sales), row[3], row[4]]
                 lst.append(l)
 
 readcsv('data/daily_sales_data_0.csv')
 readcsv('data/daily_sales_data_1.csv')
 readcsv('data/daily_sales_data_2.csv')
 
-def get_date(row):
-    return datetime.strptime(row[1], "%Y-%m-%d")
+def get_date(item_row):
+    return datetime.strptime(item_row[1], "%Y-%m-%d")
+
 sorted_data = sorted(lst, key=get_date)
 
 
@@ -32,36 +30,73 @@ with open('data/output.csv', 'w', newline='\n') as csvfile:
      for row in sorted_data:
          writer.writerow(row)
 
+
+def filter_region(index):
+    regions_based_list = []
+    for sorted_row in sorted_data:
+        if index == sorted_row[2]:
+            regions_based_list.append(sorted_row)
+
+    return regions_based_list
+
+
 app = Dash()
 
-sales = []
-regions = []
-dates = []
-for row in sorted_data:
-    sales.append(row[0])
-    dates.append(row[1])
-    regions.append(row[2])
+def loadChart(region):
+    regions_based_list = filter_region(region)
 
-df = pd.DataFrame({
-    "Date": dates,
-    "Sales": sales,
-    "Regions": regions
-})
+    sales = []
+    dates = []
+    for region_row in regions_based_list:
+        sales.append(region_row[0])
+        dates.append(region_row[1])
 
-fig = px.line(df, x="Date", y="Sales")
 
-app.layout = html.Div(children=[
-    html.H1(children='Sales Dashboard'),
+    df = pd.DataFrame({
+        "Date": dates,
+        "Sales": sales
+    })
 
-    html.Div(children='''
-        Forecasting sales of the Pink Morsel after and before price increase on the 15th of January, 2021
-    '''),
+    fig = px.line(df, x="Date", y="Sales")
 
-    dcc.Graph(
-        id='example-graph',
-        figure=fig
-    )
-])
+    app.layout = html.Div(children=[
+        html.H1(children='Sales Dashboard'),
+
+        html.Div(children='''
+            Forecasting sales of the Pink Morsel after and before price increase on the 15th of January, 2021
+        '''),
+
+        html.Div(
+            [
+                html.Label("Select Region:"),
+                dcc.RadioItems(
+                    id="region-radio",
+                    options=[
+                        {"label": "West", "value": "west"},
+                        {"label": "East", "value": "east"},
+                        {"label": "North", "value": "north"},
+                        {"label": "South", "value": "south"}
+                    ],
+                    value="west",  # default selection
+                    inline=True
+                )
+            ],
+            className="radio-container"
+        ),
+
+        dcc.Graph(
+            id='example-graph',
+            figure=fig
+        )
+    ])
+
+@app.callback(
+    Input("region-radio", "value")
+)
+def radio_clicked(selected_region):
+    loadChart(selected_region)
+
+radio_clicked("north")
 
 if __name__ == '__main__':
     app.run(debug=True)

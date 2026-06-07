@@ -1,0 +1,13 @@
+.radio-container {
+    margin: 20px;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    width: fit-content;
+}
+
+.radio-container label {
+    font-size: 18px;
+    margin-right: 15px;
+    cursor: pointer;
+}
